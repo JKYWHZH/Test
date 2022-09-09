@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+   <meta charset="utf-8">
+   <title>考勤统计</title>
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta http-equiv="Cache-Control" content="max-age=72000" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">  
+   <meta name="keywords" content="fcup.js,大文件上传,分段上传,h5上传,jquery上传插件,切片上传" />
+   <meta name="description" content="fcup.js是一款支持大文件切片上传jquery插件，使用简单方便，功能强大" />
+   <link rel="stylesheet" href="pintuer/pintuer.css">
+   <link rel="shortcut icon" href="picture/logo2(1).png" type="image/x-icon">
+   <link rel="stylesheet" type="text/css" href="pintuer/popup.css"/>
+   <script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+   <script src="pintuer/pintuer.js"></script>
+</head>
+<style>
+   @font-face {
+      font-family: 'logo';
+   }
+
+   .logo {
+      font-size: 25px;
+      font-family: "logo";
+   }
+
+   .csbg {
+      background-image: linear-gradient(to right, #eea2a2 0%, #bbc1bf 19%, #57c6e1 42%, #b49fda 79%, #7ac5d8 100%);
+   }
+</style>
+
+<body class="change_background">
+   <div class="container" style="margin-top: 5px">
+      <div class="view-body" style="margin-bottom: 10px">
+         <div class="keypoint bg-blue bg-inverse radius text-center csbg change_font">
+            <a href="test.html" target="_blank">
+               <h1 class="logo">
+                  JKYWHZH
+               </h1>
+            </a>
+            <p style="margin-bottom: 50px">
+               专注于龙盈-云原生开发小组考勤统计
+            </p>
+            <p>
+               <form id="uploadForm" style="display: none" method="post" enctype="multipart/form-data" >
+               　　　<input type="file" class="button bg-main button-big icon-arrow-circle-up" id="file" name="file" onchange="fileUpload()"/>
+                    <input type="submit" id="upload">
+               </form>
+               <button class="button bg-main button-big icon-arrow-circle-up" onclick="selectFile()">立即上传</button>
+            </p>
+         </div>
+      </div>
+
+      <div class="view-body">
+         <div class="panel">
+            <div class="panel-head change_background">
+               <strong class="change_font">更新说明</strong>
+            </div>
+            <ul class="list-group change_font">
+               <li>2022/6/20 : 支持邮箱模板发送</li>
+               <li>2022/6/21 : 支持解析zip压缩包中xls、xlsx文件解析</li>
+               <li>2022/6/22 : 支持前端弹窗提示、linux运行</li>
+               <li>2022/6/29 : 解决描述解析异常问题</li>
+               <li>2022/7/06 : 增加自动黑夜模式功能</li>
+               <li>2022/9/01 : 增加图片文字解析并复制到剪切板的功能</li>
+               <li>2022/9/09 : 增加地址栏logo</li>
+            </ul>
+         </div>
+      </div>
+
+      <div class="container-layout" style="margin-top: 15%">
+         <div class="padding-top">
+            <div class="text-center height-big change_font" >版权所有 © <a href="test.html" target="_blank" class="change_font" >jky.whzh</a> All Rights Reserved，by jky</div>
+         </div>
+      </div>
+   </div>
+</body>
+<script type="text/javascript" src="js/popup.js"></script>
+<script type="text/javascript" src="js/clipboard.min.js"></script>
+<script>
+   var date = new Date().getHours();
+
+   if (date > 19){
+      console.log("开启暗夜模式");
+      /*设置为暗色背景*/
+      $('.change_background').css("background-color", '#383737');
+
+      $('.change_font').css("color", '#ddeeff');
+
+      /*表格外边框*/
+      $('.panel').css("border", "solid 1px #bdb7b7");
+   }else{
+      console.log("开启白昼模式")
+   }
+
+   function selectFile(){
+      $("#file").trigger("click");
+   }
+   var Popup = new Popup();
+
+   function fileUpload(){
+      var formData = new FormData($('#uploadForm')[0]);
+      var fileHtml = '<input type="file" class="button bg-main button-big icon-arrow-circle-up" id="file" name="file" onchange="fileUpload()"/>';
+      $.ajax({
+         type: 'post',
+         url: "/upload", //上传文件的请求路径必须是绝对路劲
+         data: formData,
+         cache: false,
+         processData: false,
+         contentType: false,
+      }).success(function (data) {
+         var contains = data.indexOf("[]");
+         if(contains != -1){
+            var split = data.split("[]");
+            /*复制结果*/
+            console.log(split[1]);
+            copy(split[1]);
+            Popup.toast(split[0], 3);
+         }else{
+            Popup.toast(data, 3);
+         }
+         $('#file').replaceWith(fileHtml);
+      }).error(function () {
+         Popup.toast('上传失败', 3);
+         $('#file').replaceWith(fileHtml)
+      });
+   }
+
+   function copy(data) {
+      window.prompt("请复制", data)
+   }
+
+</script>
+
+</html>
