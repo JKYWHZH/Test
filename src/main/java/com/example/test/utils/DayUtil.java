@@ -7,12 +7,21 @@ import okhttp3.Response;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DayUtil {
 
     private static final String KONG = "休息";
 
+    /**
+     * 在线假期请求
+     */
     private static final String HOLIDAY_URL = "http://timor.tech/api/holiday/year";
+
+    /**
+     * 假期缓存
+     */
+    private static Map<String, Map<String, Map<String, Object>>> HOLIDAY_CACHE = new ConcurrentHashMap<>();
 
     public static List<String> get(List<String> content){
         Calendar cal = Calendar.getInstance();
@@ -70,6 +79,9 @@ public class DayUtil {
         }else {
             url = url.concat("-0").concat(String.valueOf(month));
         }
+        if (HOLIDAY_CACHE.containsKey(url)) {
+            return HOLIDAY_CACHE.get(url);
+        }
         OkHttpClient client = new OkHttpClient();
         Response response;
         //解密数据
@@ -87,6 +99,7 @@ public class DayUtil {
         }
         Map map = JSONObject.parseObject(rsa, Map.class);
         Map<String, Map<String, Object>> holiday = (Map<String, Map<String, Object>>) map.get("holiday");
+        HOLIDAY_CACHE.put(url, holiday);
         return holiday;
     }
 
