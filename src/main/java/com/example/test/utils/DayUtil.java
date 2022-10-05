@@ -1,6 +1,7 @@
 package com.example.test.utils;
 
 import com.alibaba.fastjson.JSONObject;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -9,6 +10,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j(topic = "节假日工具类")
 public class DayUtil {
 
     private static final String KONG = "休息";

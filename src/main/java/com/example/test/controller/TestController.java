@@ -1,12 +1,10 @@
 package com.example.test.controller;
 
-import com.baidu.aip.ocr.AipOcr;
 import com.example.test.entity.WorkInfo;
+import com.example.test.service.DailyService;
 import com.example.test.service.MailService;
 import com.example.test.service.WorkService;
-import com.example.test.utils.DayUtil;
 import com.example.test.utils.ExeclUtil;
-import com.example.test.utils.GetFontUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,7 +31,7 @@ public class TestController {
     private WorkService workService;
 
     @Resource
-    private AipOcr aipOcr;
+    private DailyService dailyService;
 
     @Value("${mail.zipPath}")
     private String zipPath;
@@ -42,7 +40,7 @@ public class TestController {
     private String type;
 
     @RequestMapping(method=RequestMethod.POST, value = "upload")
-    public String start(@RequestParam("file")MultipartFile file) throws IOException{
+    public String start(@RequestParam("file") MultipartFile file) throws IOException{
         String fileName = file.getOriginalFilename();
         long size = file.getSize();
         int i = fileName.lastIndexOf(".");
@@ -74,13 +72,8 @@ public class TestController {
                 log.info("图片名为[{}]大小为[{}]，图片过大不予操作", fileName, size);
                 return "图片过大，请重新上传";
             }
-            List<String> content = GetFontUtil.getContent(aipOcr, file);
-            List<String> daytData = DayUtil.get(content);
-            String ans = "";
-            for (int i1 = 0; i1 < daytData.size(); i1++) {
-                ans = ans.concat(daytData.get(i1)).concat("\n");
-            }
-            return "日报内容已解析并复制[]"+ans;
+            String currentDaily = dailyService.getCurrentDaily(file);
+            return "日报内容已解析并复制[]" + currentDaily;
         }
     }
 }

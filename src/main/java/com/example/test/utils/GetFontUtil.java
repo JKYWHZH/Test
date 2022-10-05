@@ -1,6 +1,7 @@
 package com.example.test.utils;
 
 import com.baidu.aip.ocr.AipOcr;
+import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.multipart.MultipartFile;
@@ -11,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j(topic = "图片解析工具类")
 public class GetFontUtil{
 
     private static String RESULT = "words_result";
@@ -33,7 +35,7 @@ public class GetFontUtil{
         JSONObject jsonObject = aipOcr.basicAccurateGeneral(bytes, options);
         JSONArray words_result = (JSONArray)jsonObject.get(RESULT);
         List<String> ans = new ArrayList<>();
-        words_result.toList().stream().forEach(object -> {
+        words_result.toList().forEach(object -> {
             Map map = com.alibaba.fastjson.JSONObject.parseObject(com.alibaba.fastjson.JSONObject.toJSONString(object), Map.class);
             ans.add(map.get(WORDS).toString());
         });

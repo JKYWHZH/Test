@@ -21,8 +21,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-@Slf4j
+@Slf4j(topic = "execl工具类")
 public class ExeclUtil {
+
+    //下班时间
+    private static final String GO_HOME = "17:45:00";
+    //上班时间
+    private static final String GO_WORK = "08:45:00";
 
     public static List<WorkInfo> readExcel(String fileName) throws IOException, ParseException {
         Workbook workbook = null;
@@ -39,8 +44,8 @@ public class ExeclUtil {
         } else {
             workbook = new HSSFWorkbook(is);
         }
-        if (workbook == null) {
-            System.err.println("Excel文件有问题,请检查！");
+        if (null == workbook) {
+            log.warn("Excel文件有问题,请检查！");
             return null;
         }
         //获取Excel表单
@@ -54,8 +59,8 @@ public class ExeclUtil {
             String[] s = data.split(" ");
             //no contain this time
             String day = s[0];
-            Date goHomeTime = format.parse(day.concat(" 17:45:00"));
-            Date goWorkTime = format.parse(day.concat(" 08:45:00"));
+            Date goHomeTime = format.parse(day.concat(" ").concat(GO_HOME));
+            Date goWorkTime = format.parse(day.concat(" ").concat(GO_WORK));
             Date sourceTime = format.parse(data);
             WorkInfo workInfo;
             if (!tmpAns.containsKey(day)) {
