@@ -8,11 +8,12 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">  
    <meta name="keywords" content="fcup.js,大文件上传,分段上传,h5上传,jquery上传插件,切片上传" />
    <meta name="description" content="fcup.js是一款支持大文件切片上传jquery插件，使用简单方便，功能强大" />
-   <link rel="stylesheet" href="pintuer/pintuer.css">
+   <link rel="stylesheet" href="css/pintuer.css">
    <link rel="shortcut icon" href="picture/logo2(1).png" type="image/x-icon">
-   <link rel="stylesheet" type="text/css" href="pintuer/popup.css"/>
+   <link rel="stylesheet" type="text/css" href="css/popup.css"/>
+   <link rel="stylesheet" type="text/css" href="css/style.css">
    <script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
-   <script src="pintuer/pintuer.js"></script>
+   <script src="js/pintuer.js"></script>
 </head>
 <style>
    @font-face {
@@ -26,6 +27,14 @@
 
    .csbg {
       background-image: linear-gradient(to right, #eea2a2 0%, #bbc1bf 19%, #57c6e1 42%, #b49fda 79%, #7ac5d8 100%);
+   }
+   .mask{
+      opacity:0.6;
+      background:#fff;
+      position:absolute;;/第（2）空，设置模态框绝对定位/
+      left:0;top:0;
+      width:100%;
+      height:100%;
    }
 </style>
 
@@ -68,16 +77,23 @@
             </ul>
          </div>
       </div>
-
       <div class="container-layout" style="margin-top: 15%">
          <div class="padding-top">
             <div class="text-center height-big change_font" >版权所有 © <a href="test.html" target="_blank" class="change_font" >jky.whzh</a> All Rights Reserved，by jky</div>
          </div>
       </div>
    </div>
+   <div id="preloader_2" style="display: none;position: absolute;top:40%;z-index: 999">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+   </div>
+   <div class="mask" style="display: none;position: absolute;"></div>
 </body>
 <script type="text/javascript" src="js/popup.js"></script>
 <script type="text/javascript" src="js/clipboard.min.js"></script>
+<script type="text/javascript" src="js/js.js"></script>
 <script>
    var date = new Date().getHours();
 
@@ -109,7 +125,14 @@
          cache: false,
          processData: false,
          contentType: false,
+         beforeSend: function (){
+            $(".mask").show()
+            $("#preloader_2").show("fast")
+
+         }
       }).success(function (data) {
+         $(".mask").hide();
+         $("#preloader_2").hide("normal");
          var contains = data.indexOf("[]");
          if(contains != -1){
             var split = data.split("[]");
@@ -122,6 +145,8 @@
          }
          $('#file').replaceWith(fileHtml);
       }).error(function () {
+         $(".mask").hide("normal");
+         $("#preloader_2").hide("normal");
          Popup.toast('上传失败', 3);
          $('#file').replaceWith(fileHtml)
       });
