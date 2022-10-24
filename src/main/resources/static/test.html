@@ -2,9 +2,76 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>分片上传测试</title>
+    <script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
 </head>
 <body>
-逗你玩！
+    <input type="file" id="file6" multiple>
+    <button type="button" class="btnFile6">分片上传6</button>
+    <div class="result"></div>
 </body>
+<script>
+    var blockSize = 100000000;//每块的大小
+
+    $(".btnFile6").click(function () {
+        var file = $("#file6")[0].files[0];
+        check(file);
+    });
+
+    function check(file){
+        $.ajax({
+            type: 'post',
+            url: "check", //上传文件的请求路径必须是绝对路劲
+            cache: false,
+            processData: false,
+            contentType: false,
+        }).success(function (id) {
+            console.log("id:" + id)
+            upload(id, file, 0);
+        }).error(function () {
+
+        })
+    }
+
+    function merge(id, filename){
+        var formData = new FormData();//初始化一个FormData对象
+        formData.append("id", id);
+        formData.append("fileName", filename);//保存文件名字
+        $.ajax({
+            url: "merge",
+            type: "POST",
+            data: formData,
+            processData: false,  // 告诉jQuery不要去处理发送的数据
+            contentType: false,   // 告诉jQuery不要去设置Content-Type请求头
+            success: function () {
+
+            }
+        });
+    }
+
+    function upload(id, file, skip){
+        var formData = new FormData();//初始化一个FormData对象
+        var nextSize = Math.min((skip + 1) * blockSize, file.size);//读取到结束位置
+        var fileData = file.slice(skip * blockSize, nextSize);//截取 部分文件 块
+        formData.append("id", id);
+        formData.append("file", fileData);//将 部分文件 塞入FormData
+        formData.append("skip", skip);
+        $.ajax({
+            url: "chunkUpload",
+            type: "POST",
+            data: formData,
+            processData: false,  // 告诉jQuery不要去处理发送的数据
+            contentType: false,   // 告诉jQuery不要去设置Content-Type请求头
+            success: function (responseText) {
+                $(".result").html("已经上传了" + (skip + 1) + "块文件");
+                if (file.size <= nextSize) {//如果上传完成，则跳出继续上传
+                    merge(id, file.name)
+                    alert("上传完成");
+                    return;
+                }
+                upload(id, file, ++skip);//递归调用
+            }
+        })
+    }
+</script>
 </html>

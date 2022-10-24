@@ -127,7 +127,7 @@ public class ExeclUtil {
      * 保存zip文件到本地并调用解压方法并返回解压出的文件的路径集合
      *
      * @param file 文件
-     * @return list //解压出的文件的路径合集
+     * @return list 解压出的文件的路径合集
      */
     public static List<String> batchadd(MultipartFile file, String zipPath, String tmpFolder) {
         /*

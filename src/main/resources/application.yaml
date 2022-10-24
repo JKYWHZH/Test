@@ -26,6 +26,7 @@ mail:
              戴硕: 1605544014@qq.com,
              郭宁宁: 1970658387@qq.com'
   zipPath: /home/jkywhzh/work/
+  #zipPath: D:\\csixframework\\uploadPath\\file\\
   type: jpg,jpeg,png,bmp,zip
 
 

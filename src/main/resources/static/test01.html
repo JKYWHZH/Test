@@ -1,0 +1,44 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="https://cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+</head>
+
+<body>
+
+<h1>分片断点续传测试</h1>
+<div id="progressBar"></div>
+
+<input type="file" id="file6" multiple>
+<button type="button" id="btn">点我上传</button>
+<input type="button" id="btn1"  value="点我停止上传" />
+<div class="result"></div>
+
+<script type="module">
+  import FileSliceUpload  from './js/FileSliceUpload.js'
+  let checkUrl = "check";
+  let uploadUrl = "chunkUpload";
+  let margeUrl = "merge";
+  let file = $("#file6")[0];
+  let fileSliceUpload = new FileSliceUpload(checkUrl, uploadUrl, margeUrl, file)
+  let btn=  document.querySelector("#btn")
+  let btn1=  document.querySelector("#btn1")
+
+  btn.addEventListener("click",function () {
+    fileSliceUpload.startUploadFile()
+  })
+  btn1.addEventListener("click",function () {
+    fileSliceUpload.stopUploadFile()
+  })
+
+</script>
+
+
+</body>
+
+</html>

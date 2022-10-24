@@ -5,6 +5,7 @@ import com.example.test.service.DailyService;
 import com.example.test.service.MailService;
 import com.example.test.service.WorkService;
 import com.example.test.utils.ExeclUtil;
+import com.example.test.utils.FileUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -39,36 +41,36 @@ public class TestController {
     @Value("${mail.type}")
     private String type;
 
-    @RequestMapping(method=RequestMethod.POST, value = "upload")
-    public String start(@RequestParam("file") MultipartFile file) throws IOException{
+    @RequestMapping(method = RequestMethod.POST, value = "upload")
+    public String start(@RequestParam("file") MultipartFile file) throws IOException {
         String fileName = file.getOriginalFilename();
         long size = file.getSize();
         int i = fileName.lastIndexOf(".");
         String fileType = fileName.substring(i + 1, fileName.length());
         boolean contains = type.contains(fileType);
-        if (!contains){
+        if (!contains) {
             log.info("[{}]文件类型为[{}]，不予操作", fileName, fileType);
             return "不支持此文件类型";
         }
         //解析考勤发邮件
-        if (fileType.equals("zip")){
+        if (fileType.equals("zip")) {
             //临时保存地址
             String tmpFolder = UUID.randomUUID().toString().concat("/");
-            try{
+            try {
                 List<String> filePathList = ExeclUtil.batchadd(file, zipPath, tmpFolder);
                 Map<String, List<WorkInfo>> work = workService.getWork(filePathList);
                 mailService.send(work);
-            }catch (Exception e){
+            } catch (Exception e) {
                 log.info("发送邮件失败[{}]", e);
                 return "解析考勤失败";
-            }finally {
-                String[] cmd = new String[] { "/bin/sh", "-c", "rm -rf ".concat(zipPath).concat(tmpFolder)};
+            } finally {
+                String[] cmd = new String[]{"/bin/sh", "-c", "rm -rf ".concat(zipPath).concat(tmpFolder)};
                 log.info("执行删除命令[{}]", Arrays.deepToString(cmd));
                 Runtime.getRuntime().exec(cmd);
             }
             return "考勤解析成功，请查看邮件";
-        }else{//解析日报
-            if (size > 10485760){
+        } else {//解析日报
+            if (size > 10485760) {
                 log.info("图片名为[{}]大小为[{}]，图片过大不予操作", fileName, size);
                 return "图片过大，请重新上传";
             }
@@ -76,4 +78,52 @@ public class TestController {
             return "日报内容已解析并复制[]" + currentDaily;
         }
     }
+
+    /**
+     * 校验接口
+     * @param id 文件唯一标识
+     * @return 文件唯一标识。若标识存在则续传，否则为新上传
+     */
+    @RequestMapping(method = RequestMethod.POST, value = "check")
+    public String check(String id) {
+        if (null == id || "".equals(id)){
+            id = UUID.randomUUID().toString();
+            File tempFile = new File(zipPath.concat(id));
+            tempFile.mkdirs();
+            return id;
+        }
+        File tempFile = new File(zipPath.concat(id));
+        if (!tempFile.exists()) {
+            tempFile.mkdirs();
+        }
+        return id;
+    }
+
+    /**
+     * 分片上传接口
+     * @param id      文件唯一标识
+     * @param file    第skip块文件
+     * @param skip    文件块数
+     * @return  操作结果
+     */
+    @RequestMapping(method = RequestMethod.POST, value = "chunkUpload")
+    public String chunkUpload(String id, MultipartFile file, String skip){
+        File file1 = new File(zipPath.concat(id).concat("\\").concat(skip));
+        try {
+            file.transferTo(file1);
+            log.info("[{}],[{}] is success", skip, file.getName());
+            return "success";
+        } catch (IOException e) {
+            log.warn(e.getMessage(), e);
+            log.info("[{}],[{}] is failed", skip, file.getName());
+            return "fail";
+        }
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "merge")
+    public String merge(String id, String fileName){
+        FileUtil.merge(zipPath.concat(id), zipPath.concat(id), fileName);
+        return null;
+    }
+
 }

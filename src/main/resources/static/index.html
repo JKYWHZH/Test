@@ -131,7 +131,7 @@
 
          }
       }).success(function (data) {
-         $(".mask").hide();
+         $(".mask").hide("slow");
          $("#preloader_2").hide("normal");
          var contains = data.indexOf("[]");
          if(contains != -1){
