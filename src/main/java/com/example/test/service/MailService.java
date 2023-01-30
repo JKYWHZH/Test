@@ -67,11 +67,11 @@ public class MailService {
                 .map(receiver -> CompletableFuture.runAsync(() -> {
                     //创建邮件对象
                     MimeMessage mimeMessage = new MimeMessage(session);
+                    //收件人姓名
+                    String receiverName = receiver.getName();
                     try {
                         //收件人地址
                         String emailAddress = receiver.getMailAddress();
-                        //收件人姓名
-                        String name = receiver.getName();
                         //待发送数据
                         List<WorkInfo> workInfos = receiver.getWorkInfos();
                         //邮件发送人
@@ -81,12 +81,12 @@ public class MailService {
                         //邮件标题
                         mimeMessage.setSubject("考勤统计");
                         //邮件内容
-                        mimeMessage.setContent(html(name, null == workInfos || 0 == workInfos.size() ? null : workInfos), "text/html;charset=UTF-8");
+                        mimeMessage.setContent(html(receiverName, null == workInfos || 0 == workInfos.size() ? null : workInfos), "text/html;charset=UTF-8");
                         //发送邮件
                         connect.sendMessage(mimeMessage, mimeMessage.getAllRecipients());
-                        log.info("用户[{}]的考勤信息发送成功", name);
+                        log.info("用户[{}]的考勤信息发送成功", receiverName);
                     } catch (MessagingException | UnsupportedEncodingException e) {
-                        log.error("发送邮件至[{}]时，发生报错，可能原因为[{}]", name, e.getCause().getMessage());
+                        log.error("发送邮件至[{}]时，发生报错，可能原因为[{}]", receiverName, e.getCause().getMessage());
                     }
                 }, threadPool))
                 .toArray(size -> new CompletableFuture[size]);
