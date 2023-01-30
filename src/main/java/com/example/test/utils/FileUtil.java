@@ -1,7 +1,9 @@
 package com.example.test.utils;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -41,5 +43,26 @@ public class FileUtil {
         } catch (IOException e) {
             log.error(e.getMessage(), e);
         }
+    }
+
+    /**
+     * 将MultipartFile转换为File
+     * @param multiFile
+     * @return
+     */
+    public static File MultipartFileToFile(MultipartFile multiFile) {
+        // 获取文件名
+        String fileName = multiFile.getOriginalFilename();
+        // 获取文件后缀
+        String prefix = fileName.substring(fileName.lastIndexOf("."));
+        // 若须要防止生成的临时文件重复,能够在文件名后添加随机码
+        try {
+            File file = File.createTempFile(fileName, prefix);
+            multiFile.transferTo(file);
+            return file;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

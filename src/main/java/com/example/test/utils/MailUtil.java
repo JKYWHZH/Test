@@ -5,8 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.mail.*;
 import java.security.GeneralSecurityException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 
 @Slf4j(topic = "邮箱工具类")
@@ -130,24 +128,5 @@ public class MailUtil {
         //开启debug模式
         session.setDebug(true);
         return session;
-    }
-
-    /**
-     * 获取接收人信息
-     * @return 返回map结果集（map<接收人姓名, 接收人邮箱地址>）
-     */
-    public Map<String, String> getReceivers(String receiver){
-        Map<String, String> receivers = new HashMap<>();
-        if (receiver.contains(",")) {
-            String[] split = receiver.split(",");
-            for (String tmp : split) {
-                String[] tmpSplit = tmp.split(":");
-                receivers.put(tmpSplit[0].intern().trim(), tmpSplit[1].intern().trim());
-            }
-        }else{
-            String[] tmpSplit = receiver.split(":");
-            receivers.put(tmpSplit[0].intern().trim(), tmpSplit[1].intern().trim());
-        }
-        return receivers;
     }
 }

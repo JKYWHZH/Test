@@ -1,10 +1,9 @@
 package com.example.test.controller;
 
-import com.example.test.entity.WorkInfo;
+import com.example.test.entity.Receiver;
 import com.example.test.service.DailyService;
 import com.example.test.service.MailService;
 import com.example.test.service.WorkService;
-import com.example.test.utils.ExeclUtil;
 import com.example.test.utils.FileUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,9 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j(topic = "上传接口")
@@ -54,19 +51,14 @@ public class TestController {
         }
         //解析考勤发邮件
         if (fileType.equals("zip")) {
-            //临时保存地址
-            String tmpFolder = UUID.randomUUID().toString().concat("/");
             try {
-                List<String> filePathList = ExeclUtil.batchadd(file, zipPath, tmpFolder);
-                Map<String, List<WorkInfo>> work = workService.getWork(filePathList);
-                mailService.send(work);
+                //获取用户压缩文件信息
+                List<Receiver> receivers = workService.getZipFileInfo(file);
+                //发送邮件
+                mailService.send(receivers);
             } catch (Exception e) {
                 log.info("发送邮件失败[{}]", e);
                 return "解析考勤失败";
-            } finally {
-                String[] cmd = new String[]{"/bin/sh", "-c", "rm -rf ".concat(zipPath).concat(tmpFolder)};
-                log.info("执行删除命令[{}]", Arrays.deepToString(cmd));
-                Runtime.getRuntime().exec(cmd);
             }
             return "考勤解析成功，请查看邮件";
         } else {//解析日报
@@ -75,7 +67,7 @@ public class TestController {
                 return "图片过大，请重新上传";
             }
             String currentDaily = dailyService.getCurrentDaily(file);
-            return "日报内容已解析并复制[]" + currentDaily;
+            return "日报内容已解析[]" + currentDaily;
         }
     }
 
@@ -120,6 +112,12 @@ public class TestController {
         }
     }
 
+    /**
+     * 合并文件
+     * @param id        文件id
+     * @param fileName  文件名称
+     * @return 操作结果
+     */
     @RequestMapping(method = RequestMethod.POST, value = "merge")
     public String merge(String id, String fileName){
         FileUtil.merge(zipPath.concat(id), zipPath.concat(id), fileName);

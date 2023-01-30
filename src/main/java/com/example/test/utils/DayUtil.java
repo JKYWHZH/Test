@@ -1,13 +1,18 @@
 package com.example.test.utils;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.example.test.entity.API_TYPE;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j(topic = "节假日工具类")
@@ -18,12 +23,12 @@ public class DayUtil {
     /**
      * 在线假期请求
      */
-    private static final String HOLIDAY_URL = "http://timor.tech/api/holiday/year";
+    private static final String HOLIDAY_URL = "https://www.mxnzp.com/api/holiday/list/month/";
 
     /**
      * 假期缓存
      */
-    private static Map<String, Map<String, Map<String, Object>>> HOLIDAY_CACHE = new ConcurrentHashMap<>();
+    private static Map<String, List<String>> HOLIDAY_CACHE = new ConcurrentHashMap<>();
 
     public static List<String> get(List<String> content){
         Calendar cal = Calendar.getInstance();
@@ -69,81 +74,41 @@ public class DayUtil {
     }
 
     /**
-     * 获取节假日（不包含周末）
+     * 获取节假日
      * @param year   年
      * @param month  月
      * @return  节假日信息
      */
-    private static Map getJjr(int year, int month) {
-        String url = HOLIDAY_URL.concat("/").concat(String.valueOf(year));
+    private static List<String> getHoliday(int year, int month) {
+        String url = HOLIDAY_URL.concat(String.valueOf(year));
         if (month >= 10){
-            url = url.concat("-").concat(String.valueOf(month));
+            url = url.concat(String.valueOf(month));
         }else {
-            url = url.concat("-0").concat(String.valueOf(month));
+            url = url.concat("0").concat(String.valueOf(month));
         }
         if (HOLIDAY_CACHE.containsKey(url)) {
             return HOLIDAY_CACHE.get(url);
         }
-        OkHttpClient client = new OkHttpClient();
+        String ans_url = url.concat(API_TYPE.HOLIDAY.getURL());
         Response response;
-        //解密数据
-        String rsa = null;
+        OkHttpClient client = new OkHttpClient();
+        List<String> holiday = new ArrayList<>();
         Request request = new Request.Builder()
-                .url(url)
+                .url(ans_url)
                 .get()
-                .addHeader("Content-Type", "application/x-www-form-urlencoded")
                 .build();
         try {
             response = client.newCall(request).execute();
-            rsa = response.body().string();
+            Map map = JSONObject.parseObject(response.body().string(), Map.class);
+            Object data = ((JSONArray) map.get("data")).get(0);
+            JSONArray days = (JSONArray) ((JSONObject) data).get("days");
+            days.stream().forEach(e -> {
+                String date = ((JSONObject) e).get("date").toString();
+                holiday.add(date);
+            });
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
-        Map map = JSONObject.parseObject(rsa, Map.class);
-        Map<String, Map<String, Object>> holiday = (Map<String, Map<String, Object>>) map.get("holiday");
-        HOLIDAY_CACHE.put(url, holiday);
         return holiday;
     }
-
-    /**
-     * 获取节假日
-     * @param year   年
-     * @param month  月
-     * @return  返回假期集合
-     */
-    private static List<String> getHoliday(int year, int month){
-        List<String> ans = new ArrayList<>();
-        SimpleDateFormat simdf = new SimpleDateFormat("yyyy-MM-dd");
-        Calendar calendar = new GregorianCalendar(year, month - 1, 1);
-        Calendar endCalendar = new GregorianCalendar(year, month - 1, 1);
-        endCalendar.add(Calendar.MONTH, 1);
-        while (true) {
-            int weekday = calendar.get(Calendar.DAY_OF_WEEK);
-            if (weekday == 1 || weekday == 7) {
-                ans.add(simdf.format(calendar.getTime()));
-            }
-            calendar.add(Calendar.DATE, 1);
-            if (calendar.getTimeInMillis() >= endCalendar.getTimeInMillis()) {
-                break;
-            }
-        }
-        Map<String, Map<String, Object>> holiday = getJjr(year, month);
-        Set<String> strings = holiday.keySet();
-        for (String str : strings) {
-            Map<String, Object> stringObjectMap = holiday.get(str);
-            Integer wage = (Integer) stringObjectMap.get("wage");
-            String date = (String) stringObjectMap.get("date");
-            //筛选掉补班
-            if (wage.equals(1)) {
-                ans.remove(date);
-            } else {
-                if (!ans.contains(date)) {
-                    ans.add(date);
-                }
-            }
-        }
-        Collections.sort(ans);
-        return ans;
-    }
-
 }

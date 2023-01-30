@@ -55,7 +55,7 @@
                　　　<input type="file" class="button bg-main button-big icon-arrow-circle-up" id="file" name="file" onchange="fileUpload()"/>
                     <input type="submit" id="upload">
                </form>
-               <button class="button bg-main button-big icon-arrow-circle-up" onclick="selectFile()">立即上传</button>
+               <button class="button bg-main button-big icon-arrow-circle-up" onclick="selectFile()"> 立即上传</button>
             </p>
          </div>
       </div>
@@ -128,7 +128,6 @@
          beforeSend: function (){
             $(".mask").show()
             $("#preloader_2").show("fast")
-
          }
       }).success(function (data) {
          $(".mask").hide("slow");

@@ -12,12 +12,11 @@ spring:
     multipart:
       max-file-size: 100MB
       max-request-size: 1000MB
-
 # 应用服务 WEB 访问端口
 server:
   port: 10001
 mail:
-  #receivers: '于奎涛: 954513617@qq.com'
+#  receivers: '于奎涛: 1459047098@qq.com'
   receivers: '于奎涛: 1459047098@qq.com,
              李宁: ninglee5963@163.com,
              陈少华: 1573856670@qq.com,
@@ -25,8 +24,6 @@ mail:
              张全硕: zhangquanshuo1211@163.com,
              戴硕: 1605544014@qq.com,
              郭宁宁: 1970658387@qq.com'
-  zipPath: /home/jkywhzh/work/
-  #zipPath: D:\\csixframework\\uploadPath\\file\\
   type: jpg,jpeg,png,bmp,zip
 
 

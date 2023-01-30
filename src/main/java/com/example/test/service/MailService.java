@@ -1,9 +1,9 @@
 package com.example.test.service;
 
+import com.example.test.entity.Receiver;
 import com.example.test.entity.WorkInfo;
 import com.example.test.utils.MailUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.mail.Message;
@@ -12,13 +12,13 @@ import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 @Service
 @Slf4j(topic = "邮箱业务类")
@@ -40,56 +40,64 @@ public class MailService {
     private static String name = "考勤机器人";
 
     /**
-     * 邮件接收人
+     * 线程池
      */
-    @Value("${mail.receivers}")
-    private String receiver;
-
     private static ThreadPoolExecutor threadPool = new ThreadPoolExecutor(20, 50, 4, TimeUnit.SECONDS, new ArrayBlockingQueue(10), new ThreadPoolExecutor.AbortPolicy());
 
     /**
      * 邮件发送
      * @return 发送是否成功
-     * @throws MessagingException 邮件消息错误
      */
-    public void send(Map<String, List<WorkInfo>> data) throws MessagingException {
+    public void send(List<Receiver> data){
         //创建邮箱工具类
         MailUtil mailUtil = new MailUtil();
         //设置邮箱账号
         mailUtil.setEmail(sender);
         //设置邮箱code
         mailUtil.setPassword(code);
-        //获取邮箱连接
-        Transport connect = mailUtil.connect();
         //获取邮箱session
         Session session = mailUtil.getSession();
-        //获取接收人信息
-        Map<String, String> receivers = mailUtil.getReceivers(receiver);
-        receivers.forEach((key, val) -> {
-            CompletableFuture<Void> hello_mail = CompletableFuture.runAsync(() -> {
-                //创建邮件对象
-                MimeMessage mimeMessage = new MimeMessage(session);
-                try {
-                    //邮件发送人
-                    mimeMessage.setFrom(new InternetAddress(sender, name));
-                    //邮件接收人
-                    mimeMessage.setRecipient(Message.RecipientType.TO, new InternetAddress(val));
-                    //邮件标题
-                    mimeMessage.setSubject("考勤统计");
-                    //邮件内容
-                    mimeMessage.setContent(html(key, data.get(key)), "text/html;charset=UTF-8");
-                    //发送邮件
-                    connect.sendMessage(mimeMessage, mimeMessage.getAllRecipients());
-                    log.info("用户[{}]的考勤信息发送成功", key);
-                } catch (MessagingException | UnsupportedEncodingException e) {
-                    log.error("发送邮件至[{}]时，发生报错，可能原因为[{}]", key, e.getCause().getMessage());
-                }
-            }, threadPool);
-            //TODO jion主线程待优化
-            hello_mail.join();
-        });
-        //关闭连接
-        connect.close();
+        //获取邮箱连接
+        Transport connect = mailUtil.connect();
+        //异步发送邮件
+        CompletableFuture[] completableFutures = IntStream
+                .rangeClosed(0, data.size() - 1)
+                .mapToObj(i -> data.get(i))
+                .parallel()
+                .map(receiver -> CompletableFuture.runAsync(() -> {
+                    //创建邮件对象
+                    MimeMessage mimeMessage = new MimeMessage(session);
+                    try {
+                        //收件人地址
+                        String emailAddress = receiver.getMailAddress();
+                        //收件人姓名
+                        String name = receiver.getName();
+                        //待发送数据
+                        List<WorkInfo> workInfos = receiver.getWorkInfos();
+                        //邮件发送人
+                        mimeMessage.setFrom(new InternetAddress(sender, name));
+                        //邮件接收人
+                        mimeMessage.setRecipient(Message.RecipientType.TO, new InternetAddress(emailAddress));
+                        //邮件标题
+                        mimeMessage.setSubject("考勤统计");
+                        //邮件内容
+                        mimeMessage.setContent(html(name, null == workInfos || 0 == workInfos.size() ? null : workInfos), "text/html;charset=UTF-8");
+                        //发送邮件
+                        connect.sendMessage(mimeMessage, mimeMessage.getAllRecipients());
+                        log.info("用户[{}]的考勤信息发送成功", name);
+                    } catch (MessagingException | UnsupportedEncodingException e) {
+                        log.error("发送邮件至[{}]时，发生报错，可能原因为[{}]", name, e.getCause().getMessage());
+                    }
+                }, threadPool))
+                .toArray(size -> new CompletableFuture[size]);
+        //回归主线程
+        CompletableFuture.allOf(completableFutures).join();
+        try {
+            //关闭连接
+            connect.close();
+        } catch (MessagingException e) {
+            log.error("关闭邮件连接发生报错，可能原因为[{}]", e);
+        }
     }
 
     /**
@@ -135,5 +143,43 @@ public class MailService {
         content.append(String.format("<h3>结果：不合规天为： %s，共 %s 天。 </h3>", notRule.equals("") ? "无" : notRule, notRule.contains("，") ? notRule.split("，").length : notRule.equals("") ? 0 : 1 ));
         content.append("</body></html>");
         return content.toString();
+    }
+
+    /**
+     * 按邮件模板发送
+     * @param htmlPath 邮件模板地址
+     * @return 邮件内容
+     */
+    public String html(String htmlPath) {
+        //获取文件路径
+        InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream(htmlPath);
+        BufferedReader fileReader = null;
+        StringBuffer buffer = new StringBuffer();
+        String line = "";
+        try {
+            fileReader = new BufferedReader(new InputStreamReader(inputStream));
+            while ((line = fileReader.readLine()) != null) {
+                buffer.append(line);
+            }
+        } catch (Exception e) {
+            log.error("发送邮件读取模板失败，错误堆栈信息：{}", e.getMessage());
+        } finally {
+            if (fileReader != null) {
+                try {
+                    fileReader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        //使用动态参数替换html模板中的占位符参数
+        return buffer.toString();
     }
 }
