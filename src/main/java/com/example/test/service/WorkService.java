@@ -4,7 +4,6 @@ import com.example.test.entity.Receiver;
 import com.example.test.entity.WorkInfo;
 import com.example.test.selector.UserSelector;
 import com.example.test.utils.FileUtil;
-import kotlin.collections.EmptyList;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemManager;
