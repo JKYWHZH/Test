@@ -13,7 +13,7 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
-public class Receiver {
+public class Receiver implements Cloneable{
 
     /**
      * 接收人姓名
@@ -34,4 +34,12 @@ public class Receiver {
      * 接收人的考勤信息
      */
     private List<WorkInfo> workInfos;
+
+    @Override
+    public Receiver clone() {
+        return Receiver.builder()
+                .name(this.name)
+                .mailAddress(this.mailAddress)
+                .build();
+    }
 }

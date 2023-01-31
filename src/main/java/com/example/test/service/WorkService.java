@@ -1,14 +1,13 @@
 package com.example.test.service;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.example.test.entity.Receiver;
 import com.example.test.entity.WorkInfo;
 import com.example.test.selector.UserSelector;
 import com.example.test.utils.FileUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.vfs2.FileObject;
-import org.apache.commons.vfs2.FileSystemManager;
-import org.apache.commons.vfs2.FileSystemOptions;
-import org.apache.commons.vfs2.VFS;
+import org.apache.commons.vfs2.*;
 import org.apache.commons.vfs2.provider.zip.ZipFileObject;
 import org.apache.commons.vfs2.provider.zip.ZipFileSystemConfigBuilder;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -26,6 +25,8 @@ import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @Slf4j(topic = "考勤业务类")
@@ -52,7 +53,14 @@ public class WorkService {
     private static final String ZIP_PREFIX = "zip://";
 
     public WorkService(List<Receiver> receivers) {
-        this.receivers = receivers;
+        /**
+         * TODO 通过重写clone方法 进行深拷贝 避免修改bean中用户值
+         */
+        this.receivers = IntStream.rangeClosed(0, receivers.size() - 1)
+                .mapToObj(i -> receivers.get(i))
+                .parallel()
+                .map(Receiver::clone)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -62,7 +70,7 @@ public class WorkService {
      * @throws IOException
      * @throws ParseException
      */
-    public List<Receiver> getZipFileInfo(MultipartFile file) throws Exception{
+    public List<Receiver> getZipFileInfo(MultipartFile file) throws IOException, ParseException {
         FileSystemManager manager = VFS.getManager();
         File tempFile = FileUtil.MultipartFileToFile(file);
         if (null == tempFile) {
@@ -75,11 +83,13 @@ public class WorkService {
         FileObject fileObject = manager.resolveFile(concat, fileSystemOptions);
         //用户名称选择器
         UserSelector userSelector = new UserSelector(receivers);
+        //压缩文件对应用户名查找
         fileObject.findFiles(userSelector);
         List<Receiver> receivers = userSelector.getReceivers();
         for (Receiver receiver : receivers) {
             FileObject tempFileObject = receiver.getFileObject();
             if (null != tempFileObject) {
+                //解析上下班情况
                 List<WorkInfo> workInfos = readExcel((ZipFileObject) tempFileObject);
                 //readExcel后 流会被关掉
                 receiver.setWorkInfos(workInfos);

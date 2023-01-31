@@ -110,7 +110,7 @@ public class MailService {
         String tmpTitle = "<html><head></head><body><h2>你好，"+userName+"! </h2>";
         StringBuilder content = new StringBuilder(tmpTitle);
         if (data == null) {
-            content.append("<h3>暂无待统计数据!</h3>");
+            content.append("<h3>暂无统计数据!</h3>");
             content.append("</body></html>");
             return content.toString();
         }
