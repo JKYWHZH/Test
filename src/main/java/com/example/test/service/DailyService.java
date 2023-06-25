@@ -26,7 +26,7 @@ public class DailyService {
         //获取图片中文本内容
         List<String> content = GetFontUtil.getContent(aipOcr, file);
         //区分节假日
-        List<String> daytData = DayUtil.get(content);
+        List<String> daytData = DayUtil.getHoliday(content);
         String ans = "";
         for (int i = 0; i < daytData.size(); i++) {
             ans = ans.concat(daytData.get(i)).concat("\n");

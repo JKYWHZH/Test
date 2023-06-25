@@ -18,6 +18,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Service
@@ -48,7 +49,7 @@ public class MailService {
      * 邮件发送
      * @return 发送是否成功
      */
-    public void send(List<Receiver> data){
+    public void send(List<Receiver> data) {
         //创建邮箱工具类
         MailUtil mailUtil = new MailUtil();
         //设置邮箱账号
@@ -59,10 +60,11 @@ public class MailService {
         Session session = mailUtil.getSession();
         //获取邮箱连接
         Transport connect = mailUtil.connect();
+        List<Receiver> tempData = data.stream().parallel().filter(receiver -> receiver.getMailAddress() != null).collect(Collectors.toList());
         //异步发送邮件
         CompletableFuture[] completableFutures = IntStream
-                .rangeClosed(0, data.size() - 1)
-                .mapToObj(i -> data.get(i))
+                .rangeClosed(0, tempData.size() - 1)
+                .mapToObj(i -> tempData.get(i))
                 .parallel()
                 .map(receiver -> CompletableFuture.runAsync(() -> {
                     //创建邮件对象
@@ -102,12 +104,13 @@ public class MailService {
 
     /**
      * 发送邮件模板
+     *
      * @param userName 用户名
      * @param data     考勤数据
      * @return 邮件模板
      */
-    private String html(String userName, List<WorkInfo> data){
-        String tmpTitle = "<html><head></head><body><h2>你好，"+userName+"! </h2>";
+    private String html(String userName, List<WorkInfo> data) {
+        String tmpTitle = "<html><head></head><body><h2>你好，" + userName + "! </h2>";
         StringBuilder content = new StringBuilder(tmpTitle);
         if (data == null) {
             content.append("<h3>暂无统计数据!</h3>");
@@ -119,34 +122,36 @@ public class MailService {
         String notRule = "";
         String tmpAns = "";
         for (int i = 0; i < data.size(); i++) {
-            boolean ans = data.get(i).getAns();
-            if (ans){
+            WorkInfo workInfo = data.get(i);
+            boolean ans = workInfo.getAns();
+            if (ans) {
                 content.append("<tr>");
                 tmpAns = "<td>" + "是" + "</td>";
-            }else{
+            } else {
                 content.append("<tr style=\"color:red\">");
                 tmpAns = "<td>" + "否" + "</td>";
-                if (notRule == ""){
-                    notRule = notRule.concat(data.get(i).getDate());
-                }else{
-                    notRule = notRule.concat("，").concat(data.get(i).getDate());
+                if (notRule == "") {
+                    notRule = notRule.concat(workInfo.getDate());
+                } else {
+                    notRule = notRule.concat("，").concat(workInfo.getDate());
                 }
             }
             content.append("<td>" + i + "</td>"); //序号列
             content.append("<td>" + userName + "</td>"); //姓名列
-            content.append("<td>" + data.get(i).getDate() + "</td>"); //日期列
+            content.append("<td>" + workInfo.getDate() + "</td>"); //日期列
             content.append(tmpAns);                                   //合规列
-            content.append("<td>" + data.get(i).getDesc() + "</td>"); //合规列
+            content.append("<td>" + workInfo.getWork().getInfo().concat("，").concat(workInfo.getHome().getInfo()) + "</td>"); //合规列
             content.append("</tr>");
         }
         content.append("</table>");
-        content.append(String.format("<h3>结果：不合规天为： %s，共 %s 天。 </h3>", notRule.equals("") ? "无" : notRule, notRule.contains("，") ? notRule.split("，").length : notRule.equals("") ? 0 : 1 ));
+        content.append(String.format("<h3>结果：不合规天为： %s，共 %s 天。 </h3>", notRule.equals("") ? "无" : notRule, notRule.contains("，") ? notRule.split("，").length : notRule.equals("") ? 0 : 1));
         content.append("</body></html>");
         return content.toString();
     }
 
     /**
      * 按邮件模板发送
+     *
      * @param htmlPath 邮件模板地址
      * @return 邮件内容
      */

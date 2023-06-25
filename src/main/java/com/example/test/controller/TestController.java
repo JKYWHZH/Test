@@ -2,9 +2,11 @@ package com.example.test.controller;
 
 import com.example.test.entity.Receiver;
 import com.example.test.service.DailyService;
+import com.example.test.service.ExcelService;
 import com.example.test.service.MailService;
 import com.example.test.service.WorkService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -13,7 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
-import java.io.IOException;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletResponse;
+import java.net.URLEncoder;
 import java.util.List;
 
 @Slf4j(topic = "上传接口")
@@ -29,6 +33,9 @@ public class TestController {
     @Resource
     private DailyService dailyService;
 
+    @Resource
+    private ExcelService excelService;
+
     /**
      * 支持文件类型
      */
@@ -36,11 +43,10 @@ public class TestController {
     private String type;
 
     @RequestMapping(method = RequestMethod.POST, value = "upload")
-    public String start(@RequestParam("file") MultipartFile file) throws IOException {
+    public String start(@RequestParam("file") MultipartFile file) {
         String fileName = file.getOriginalFilename();
         long size = file.getSize();
-        int i = fileName.lastIndexOf(".");
-        String fileType = fileName.substring(i + 1, fileName.length());
+        String fileType = fileName.substring(fileName.lastIndexOf(".") + 1);
         boolean contains = type.contains(fileType);
         if (!contains) {
             log.info("[{}]文件类型为[{}]，不予操作", fileName, fileType);
@@ -69,4 +75,14 @@ public class TestController {
         }
     }
 
+    @RequestMapping(method = RequestMethod.POST, value = "uploads")
+    public void upload(HttpServletResponse response, @RequestParam("file") MultipartFile file) throws Exception {
+        List<Receiver> receivers = workService.getZipFileInfo(file);
+        response.setHeader("content-disposition", "attachment;filename*=utf-8''" + URLEncoder.encode("考勤统计.xlsx", "UTF-8"));
+        Workbook export = excelService.export(receivers);
+        ServletOutputStream outputStream = response.getOutputStream();
+        export.write(outputStream);
+        outputStream.close();
+        export.close();
+    }
 }

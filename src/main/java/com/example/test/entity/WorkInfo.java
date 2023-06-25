@@ -28,7 +28,34 @@ public class WorkInfo {
     private String path;
 
     /**
-     * 详情 结果为false时出现
+     * 上班情况
+     * 默认值为 无打卡记录
      */
-    private String desc;
+    private WORK_TYPE work = WORK_TYPE.NULL;
+
+    /**
+     * 下班情况
+     * 默认值为 无打卡记录
+     */
+    private WORK_TYPE home = WORK_TYPE.NULL;
+
+    public void setWork(WORK_TYPE work) {
+        if (work.getLevel().getLevel() <= this.work.getLevel().getLevel()) {
+            this.work = work;
+        }
+    }
+
+    public void setHome(WORK_TYPE home) {
+        if (home.getLevel().getLevel() <= this.home.getLevel().getLevel()) {
+            this.home = home;
+        }
+    }
+
+    public Boolean getAns() {
+        Integer level = WORK_TYPE.WORK_TYPE_LEVEL.NO_NEED_DEAL.getLevel();
+        if (work.getLevel().getLevel() < level && home.getLevel().getLevel() < level) {
+            return true;
+        }
+        return false;
+    }
 }

@@ -3,16 +3,17 @@ package com.example.test.utils;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.example.test.entity.API_TYPE;
+import com.example.test.entity.WORK_TYPE;
+import com.example.test.entity.WorkInfo;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Map;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j(topic = "节假日工具类")
@@ -26,11 +27,11 @@ public class DayUtil {
     private static final String HOLIDAY_URL = "https://www.mxnzp.com/api/holiday/list/month/";
 
     /**
-     * 假期缓存
+     * 缓存
      */
     private static Map<String, List<String>> HOLIDAY_CACHE = new ConcurrentHashMap<>();
 
-    public static List<String> get(List<String> content){
+    public static List<String> getHoliday(List<String> content){
         Calendar cal = Calendar.getInstance();
         //当前月总天数
         int totals = getCurrentMonthDay();
@@ -40,7 +41,7 @@ public class DayUtil {
         int currentMonth = cal.get(Calendar.MONTH) + 1;
         List<String> ans = new ArrayList<>(totals);
         //当前年月的节假日（包含周末）
-        List<String> holiday = getHoliday(currentYear, currentMonth);
+        List<String> holiday = get(currentYear, currentMonth, API_TYPE.HOLIDAY);
         //偏移量
         int day_offset = 0;
         for (int i = 1; i <= totals; i++) {
@@ -65,6 +66,38 @@ public class DayUtil {
         return ans;
     }
 
+    /**
+     * 获取工作日
+     * @param date 年月日 （1997-05-06）
+     * @return 工作日
+     */
+    public static Map<String, WorkInfo> getWorkDay(String date){
+        String[] split = date.split("-");
+        String url = HOLIDAY_URL.concat(split[0]).concat(split[1]);
+        String ansUrl = url.concat(API_TYPE.WORKDAY.getURL());
+        List<String> days = get(ansUrl);
+        Map<String, WorkInfo> ans = new LinkedHashMap<>();
+        for (String day : days) {
+            WorkInfo workInfo = new WorkInfo();
+            workInfo.setWork(WORK_TYPE.NULL);
+            workInfo.setHome(WORK_TYPE.NULL);
+            workInfo.setDate(day);
+            ans.put(day, workInfo);
+        }
+        return ans;
+    }
+
+    private static Date string2Date(String day, String format){
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(format);
+        try {
+            Date parse = simpleDateFormat.parse(day);
+            return parse;
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private static int getCurrentMonthDay() {
         Calendar cal = Calendar.getInstance();
         cal.set(Calendar.DATE, 1);
@@ -73,28 +106,32 @@ public class DayUtil {
         return maxDate;
     }
 
-    /**
-     * 获取节假日
-     * @param year   年
-     * @param month  月
-     * @return  节假日信息
-     */
-    private static List<String> getHoliday(int year, int month) {
+    private static List<String> get(int year, int month, API_TYPE apiType) {
         String url = HOLIDAY_URL.concat(String.valueOf(year));
         if (month >= 10){
             url = url.concat(String.valueOf(month));
         }else {
             url = url.concat("0").concat(String.valueOf(month));
         }
+
+        String ansUrl = url.concat(apiType.getURL());
+        return get(ansUrl);
+    }
+
+    /**
+     * 通过url获取日历信息
+     * @param url 请求路径
+     * @return 日历信息
+     */
+    private static synchronized List<String> get(String url) {
         if (HOLIDAY_CACHE.containsKey(url)) {
             return HOLIDAY_CACHE.get(url);
         }
-        String ans_url = url.concat(API_TYPE.HOLIDAY.getURL());
         Response response;
         OkHttpClient client = new OkHttpClient();
-        List<String> holiday = new ArrayList<>();
+        List<String> day = new LinkedList<>();
         Request request = new Request.Builder()
-                .url(ans_url)
+                .url(url)
                 .get()
                 .build();
         try {
@@ -104,11 +141,42 @@ public class DayUtil {
             JSONArray days = (JSONArray) ((JSONObject) data).get("days");
             days.stream().forEach(e -> {
                 String date = ((JSONObject) e).get("date").toString();
-                holiday.add(date);
+                day.add(date);
             });
         } catch (IOException e) {
             log.error(e.getMessage());
         }
-        return holiday;
+        HOLIDAY_CACHE.put(url, day);
+        return day;
+    }
+
+    /**
+     * 判断时间是否属于区间内（左右为包含）
+     * @param begin 开始时间
+     * @param end   结束时间
+     * @param time  待比较时间
+     * @return 是否属于区间内
+     */
+    public static boolean judge(String begin, String end, String time) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("HH:mm:ss");
+        Date beginDate = null;
+        Date endDate = null;
+        Date timeDate = null;
+        try {
+            beginDate = simpleDateFormat.parse(begin);
+            endDate = simpleDateFormat.parse(end);
+            timeDate = simpleDateFormat.parse(time);
+        } catch (ParseException e) {
+            return false;
+        }
+        //时间落在时间区间边界
+        if (timeDate.getTime() == beginDate.getTime() || timeDate.getTime() == endDate.getTime()){
+            return true;
+        }
+        //时间落在时间区间内
+        if (timeDate.after(beginDate) && timeDate.before(endDate)){
+            return true;
+        }
+        return false;
     }
 }
