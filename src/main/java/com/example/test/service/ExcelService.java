@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +29,7 @@ public class ExcelService {
 
     /**
      * 导出excel
+     *
      * @param receivers 接收人
      * @return excel
      */
@@ -35,65 +37,68 @@ public class ExcelService {
         XSSFWorkbook workbook = new XSSFWorkbook();
         //异步总结，5分钟内下班次数和代打卡次数
         CompletableFuture future = asyncSummary(workbook, receivers);
-        receivers.stream().parallel().map(receiver -> {
-            String name = receiver.getName();
-            XSSFSheet sheet;
-            synchronized (ExcelService.class) {
-                sheet = workbook.createSheet(name);
-            }
-            XSSFRow row = sheet.createRow(0);
+        receivers
+                .stream()
+                //TODO: 并行流有问题
+                //.parallel()
+                .peek(receiver -> {
+                    String name = receiver.getName();
+                    XSSFSheet sheet;
+                    synchronized (ExcelService.class) {
+                        sheet = workbook.createSheet(name);
+                    }
+                    XSSFRow row = sheet.createRow(0);
 
-            XSSFCell cell = row.createCell(0);
-            cell.setCellValue("姓名");
-            cell.setCellStyle(ExcelUtil.titleStyle(workbook));
+                    XSSFCell cell = row.createCell(0);
+                    cell.setCellValue("姓名");
+                    cell.setCellStyle(ExcelUtil.titleStyle(workbook));
 
-            XSSFCell cell01 = row.createCell(1);
-            cell01.setCellValue("日期");
-            sheet.setColumnWidth(1, 3500);
-            cell01.setCellStyle(ExcelUtil.titleStyle(workbook));
+                    XSSFCell cell01 = row.createCell(1);
+                    cell01.setCellValue("日期");
+                    sheet.setColumnWidth(1, 3500);
+                    cell01.setCellStyle(ExcelUtil.titleStyle(workbook));
 
-            XSSFCell cell02 = row.createCell(2);
-            cell02.setCellValue("考勤信息");
-            sheet.setColumnWidth(2, 3500);
-            cell02.setCellStyle(ExcelUtil.titleStyle(workbook));
+                    XSSFCell cell02 = row.createCell(2);
+                    cell02.setCellValue("考勤信息");
+                    sheet.setColumnWidth(2, 3500);
+                    cell02.setCellStyle(ExcelUtil.titleStyle(workbook));
 
-            XSSFCell cell03 = row.createCell(3);
-            sheet.setColumnWidth(3, 3500);
-            cell03.setCellStyle(ExcelUtil.titleStyle(workbook));
+                    XSSFCell cell03 = row.createCell(3);
+                    sheet.setColumnWidth(3, 3500);
+                    cell03.setCellStyle(ExcelUtil.titleStyle(workbook));
 
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 2, 3));
-            receiver.setSheet(sheet);
-            return receiver;
-        }).forEach(receiver -> {
-            List<WorkInfo> workInfos = receiver.getWorkInfos();
-            for (int i = 1; i <= workInfos.size(); i++) {
-                Row row = receiver.getSheet().createRow(i);
-                WorkInfo workInfo = workInfos.get(i - 1);
-                List<Cell> cells = new ArrayList<>();
-                Cell cell = row.createCell(0);
-                cell.setCellValue(receiver.getName());
-                cells.add(cell);
-                Cell cell01 = row.createCell(1);
-                cell01.setCellValue(workInfo.getDate());
-                cells.add(cell01);
-                Cell cell02 = row.createCell(2);
-                cell02.setCellValue(workInfo.getWork().getInfo());
-                cells.add(cell02);
-                Cell cell03 = row.createCell(3);
-                cell03.setCellValue(workInfo.getHome().getInfo());
-                cells.add(cell03);
-                CellStyle cellStyle;
-                if (workInfo.getAns()) {
-                    cellStyle = ExcelUtil.cellStyle(workbook);
-
-                } else {
-                    cellStyle = ExcelUtil.cellErrorStyle(workbook);
-                }
-                cells.forEach(tempCell -> {
-                    tempCell.setCellStyle(cellStyle);
+                    sheet.addMergedRegion(new CellRangeAddress(0, 0, 2, 3));
+                    receiver.setSheet(sheet);
+                })
+                .forEach(receiver -> {
+                    List<WorkInfo> workInfos = receiver.getWorkInfos();
+                    for (int i = 1; i <= workInfos.size(); i++) {
+                        Row row = receiver.getSheet().createRow(i);
+                        WorkInfo workInfo = workInfos.get(i - 1);
+                        List<Cell> cells = new ArrayList<>();
+                        Cell cell = row.createCell(0);
+                        cell.setCellValue(receiver.getName());
+                        cells.add(cell);
+                        Cell cell01 = row.createCell(1);
+                        cell01.setCellValue(workInfo.getDate());
+                        cells.add(cell01);
+                        Cell cell02 = row.createCell(2);
+                        cell02.setCellValue(workInfo.getWork().getInfo());
+                        cells.add(cell02);
+                        Cell cell03 = row.createCell(3);
+                        cell03.setCellValue(workInfo.getHome().getInfo());
+                        cells.add(cell03);
+                        CellStyle cellStyle;
+                        if (workInfo.getAns()) {
+                            cellStyle = ExcelUtil.cellStyle(workbook);
+                        } else {
+                            cellStyle = ExcelUtil.cellErrorStyle(workbook);
+                        }
+                        cells.forEach(tempCell -> {
+                            tempCell.setCellStyle(cellStyle);
+                        });
+                    }
                 });
-            }
-        });
         future.join();
         return workbook;
     }
@@ -163,7 +168,7 @@ public class ExcelService {
             //series.setShapeProperties(fill);
             //CTPlotArea plotArea = chart.getCTChart().getPlotArea();
             chart.plot(bar);
-        });
+        }, Executors.newSingleThreadExecutor());
         return future;
     }
 

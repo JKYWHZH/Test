@@ -43,7 +43,7 @@ public class WorkService {
     public WorkService(List<Receiver> receivers, AbstractWorkProcess workProcess) {
         this.workProcess = workProcess;
         /**
-         * TODO 通过重写clone方法 进行深拷贝 避免修改bean中用户值
+         * 通过重写clone方法 进行深拷贝 避免修改bean中用户值
          */
         this.receivers = IntStream.rangeClosed(0, receivers.size() - 1)
                 .mapToObj(i -> receivers.get(i))
@@ -104,7 +104,7 @@ public class WorkService {
 
 
     /**
-     * TODO 逻辑待优化
+     * TODO: 逻辑待优化
      * @param zipFileObject
      * @return
      * @throws IOException
