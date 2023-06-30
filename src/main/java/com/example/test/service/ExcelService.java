@@ -9,11 +9,9 @@ import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.xddf.usermodel.PresetColor;
-import org.apache.poi.xddf.usermodel.XDDFColor;
-import org.apache.poi.xddf.usermodel.XDDFSolidFillProperties;
 import org.apache.poi.xddf.usermodel.chart.*;
 import org.apache.poi.xssf.usermodel.*;
+import org.openxmlformats.schemas.drawingml.x2006.chart.CTPlotArea;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -121,25 +119,33 @@ public class ExcelService {
             XSSFRow username = sheet.createRow(0);
             //5分钟内下班次数
             XSSFRow count = sheet.createRow(1);
+            //代打卡
+            XSSFRow proxy = sheet.createRow(2);
 
             for (int i = 0; i < collect.size(); i++) {
                 Receiver receiver = collect.get(i);
+                //姓名单元
                 XSSFCell usernameCell = username.createCell(i);
                 usernameCell.setCellStyle(cellStyle);
                 usernameCell.setCellValue(receiver.getName());
-
+                //5分钟内下班单元
                 XSSFCell countCell = count.createCell(i);
                 countCell.setCellStyle(cellStyle);
                 countCell.setCellValue(receiver.getWorryCount());
+                //代打卡单元
+                XSSFCell proxyCell = proxy.createCell(i);
+                proxyCell.setCellStyle(cellStyle);
+                proxyCell.setCellValue(receiver.getProxyClockCount());
             }
+
             int size = collect.size();
             //创建画布
             XSSFDrawing drawing = sheet.createDrawingPatriarch();
-            XSSFClientAnchor anchor = (XSSFClientAnchor) drawing.createAnchor(0, 0, 0, 0, 0, 2, size, 26);
+            XSSFClientAnchor anchor = (XSSFClientAnchor) drawing.createAnchor(0, 0, 0, 0, 0, 3, size, 26);
             //创建一个chart对象
             XSSFChart chart = drawing.createChart(anchor);
             //标题
-            chart.setTitleText("5分钟内下班统计");
+            chart.setTitleText("5分钟内下班及代打卡统计");
             //标题覆盖
             chart.setTitleOverlay(false);
             XDDFChartLegend legend = chart.getOrAddLegend();
@@ -149,11 +155,12 @@ public class ExcelService {
             x.setTitle("姓名");
             //值轴（y轴），标题位置
             XDDFValueAxis y = chart.createValueAxis(AxisPosition.LEFT);
-            y.setTitle("5分钟内下班次数");
+            y.setTitle("次数");
             //分类轴标（X轴）数据，单元格范围位置[1,0]到[1,6]
             XDDFDataSource<String> xData = XDDFDataSourcesFactory.fromStringCellRange(sheet, new CellRangeAddress(0, 0, 0, size - 1));
             //final XDDFCategoryDataSource xddfCategoryDataSource = XDDFDataSourcesFactory.fromArray(nre String[]{})
             XDDFNumericalDataSource<Double> area = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(1, 1, 0, size - 1));
+            XDDFNumericalDataSource<Double> proxyCount = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(2, 2, 0, size - 1));
             //bar 条形图
             XDDFBarChartData bar = (XDDFBarChartData) chart.createData(ChartTypes.BAR, x, y);
             y.setCrossBetween(AxisCrossBetween.BETWEEN);
@@ -162,11 +169,25 @@ public class ExcelService {
             //条形图方向，纵向/横向：纵向
             bar.setBarDirection(BarDirection.COL);
             //图标加载数据，条形图
-            XDDFBarChartData.Series series = (XDDFBarChartData.Series) bar.addSeries(xData, area);
-            series.setTitle("5分钟内下班次数", null);
-            XDDFSolidFillProperties fill = new XDDFSolidFillProperties(XDDFColor.from(PresetColor.RED));
+            XDDFBarChartData.Series series01 = (XDDFBarChartData.Series) bar.addSeries(xData, area);
+            series01.setTitle("5分钟内下班次数", null);
+            //XDDFSolidFillProperties fill = new XDDFSolidFillProperties(XDDFColor.from(PresetColor.RED));
             //series.setShapeProperties(fill);
-            //CTPlotArea plotArea = chart.getCTChart().getPlotArea();
+            XDDFBarChartData.Series series02 = (XDDFBarChartData.Series) bar.addSeries(xData, proxyCount);
+            series02.setTitle("代打卡次数", null);
+            CTPlotArea plotArea = chart.getCTChart().getPlotArea();
+            //柱形图1显示数字
+            plotArea.getBarChartArray(0).getSerArray(0).addNewDLbls();
+            plotArea.getBarChartArray(0).getSerArray(0).getDLbls().addNewShowVal().setVal(true);
+            plotArea.getBarChartArray(0).getSerArray(0).getDLbls().addNewShowLegendKey().setVal(false);
+            plotArea.getBarChartArray(0).getSerArray(0).getDLbls().addNewShowCatName().setVal(false);
+            plotArea.getBarChartArray(0).getSerArray(0).getDLbls().addNewShowSerName().setVal(false);
+            //柱形图2显示数字
+            plotArea.getBarChartArray(0).getSerArray(1).addNewDLbls();
+            plotArea.getBarChartArray(0).getSerArray(1).getDLbls().addNewShowVal().setVal(true);
+            plotArea.getBarChartArray(0).getSerArray(1).getDLbls().addNewShowLegendKey().setVal(false);
+            plotArea.getBarChartArray(0).getSerArray(1).getDLbls().addNewShowCatName().setVal(false);
+            plotArea.getBarChartArray(0).getSerArray(1).getDLbls().addNewShowSerName().setVal(false);
             chart.plot(bar);
         }, Executors.newSingleThreadExecutor());
         return future;

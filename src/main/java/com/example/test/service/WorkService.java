@@ -89,7 +89,7 @@ public class WorkService {
                                 .builder()
                                 .name(username)
                                 .workInfos(readExcel((ZipFileObject) tempFileObject))
-                                .mailAddress(first.isPresent() ? first.get().getMailAddress() : null)
+                                .mailAddress(first.map(Receiver::getMailAddress).orElse(null))
                                 .build();
                     } catch (IOException e) {
                         e.printStackTrace();

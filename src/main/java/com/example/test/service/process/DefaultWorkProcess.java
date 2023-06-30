@@ -3,15 +3,13 @@ package com.example.test.service.process;
 import com.example.test.entity.WORK_TYPE;
 import com.example.test.entity.WorkInfo;
 import com.example.test.utils.DayUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -20,7 +18,11 @@ import java.util.stream.Stream;
  */
 @Component
 @Primary
+//@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+@Slf4j
 public class DefaultWorkProcess extends AbstractWorkProcess {
+
+    private ThreadLocal<Changer> changer = new ThreadLocal<>();
 
     /**
      * 处理需求（左右为包含关系）
@@ -35,10 +37,12 @@ public class DefaultWorkProcess extends AbstractWorkProcess {
      */
 
     /**
-     * 目前考勤模板，时间列为第5列（即下标第4列）
+     * 目前考勤模板，时间列为第5列（即下标第4列），门禁系统读卡器为第7列（即下标第6列）
      */
     @Override
     public Map<String, WorkInfo> process(Sheet sheet) {
+        changer.set(Changer.on);
+        //临时结果
         Map<String, WorkInfo> tempAns = new LinkedHashMap<>();
         for (int rowNum = 1; rowNum <= sheet.getLastRowNum(); rowNum++) {
             Row row = sheet.getRow(rowNum);
@@ -66,17 +70,28 @@ public class DefaultWorkProcess extends AbstractWorkProcess {
                             }
                         }
                     });
+            //打卡位置
+            String clockPosition = row.getCell(6).toString();
+            workInfo.setClockPosition(clockPosition);
             tempAns.put(day, workInfo);
         }
-
         //标准工作日
         Map<String, WorkInfo> standardWorks = tempAns
                 .keySet()
                 .stream()
-                .parallel()
+                //判断代打卡情况
+                .peek(day -> {
+                    WorkInfo workInfo = tempAns.get(day);
+                    boolean proxyClock = judgeProxyClock(workInfo.getClockPosition());
+                    if (proxyClock){
+                        log.info("姓名[{}]，日期[{}]，可能存在代打卡情况", sheet.getRow(1).getCell(1).toString(), day);
+                    }
+                    workInfo.setProxyClock(proxyClock);
+                    tempAns.put(day, workInfo);
+                })
                 .map(day -> day.substring(0, day.lastIndexOf("-")))
                 .distinct()
-                .map(day -> DayUtil.getWorkDay(day))
+                .map(DayUtil::getWorkDay)
                 .flatMap(workInfoMap -> workInfoMap.entrySet().stream())
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> v2));
 
@@ -86,6 +101,8 @@ public class DefaultWorkProcess extends AbstractWorkProcess {
                 WorkInfo workInfo = tempAns.get(day);
                 workInfo.setWork(WORK_TYPE.NON_WORK);
                 workInfo.setHome(WORK_TYPE.NON_WORK);
+                //设置代打卡情况
+                workInfo.setProxyClock(false);
                 tempAns.put(day, workInfo);
             }
         });
@@ -95,7 +112,76 @@ public class DefaultWorkProcess extends AbstractWorkProcess {
                 .parallel()
                 .flatMap(work -> work.entrySet().stream())
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> v2, TreeMap::new));
-
         return ans;
+    }
+
+    /**
+     * 判断代打卡情况
+     *
+     * @param queue 打卡位置队列
+     * @return 是否代打卡
+     */
+    private boolean judgeProxyClock(List<String> queue) {
+        //无打卡位置记录
+        if (null == queue || queue.isEmpty()) {
+            return false;
+        }
+        boolean ans = false;
+        //打卡标识
+        String clock = "汉军考勤机";
+        for (String oneClock : queue) {
+            if (oneClock.contains(changer.get().getInfo())) {
+                changer.set(changer.get().getNext());
+                continue;
+            }
+            if (changer.get() != DefaultWorkProcess.Changer.on && oneClock.contains(clock)) {
+                continue;
+            }
+            ans = true;
+        }
+        return ans;
+    }
+
+
+    /**
+     * 内部枚举开关
+     */
+    public enum Changer {
+        on {
+            @Override
+            public String getInfo() {
+                return "进";
+            }
+
+            @Override
+            public Changer getNext() {
+                return off;
+            }
+        },
+        off {
+            @Override
+            public String getInfo() {
+                return "出";
+            }
+
+            @Override
+            public Changer getNext() {
+                return on;
+            }
+        };
+
+        /**
+         * 表示信息
+         *
+         * @return 信息
+         */
+        abstract public String getInfo();
+
+        /**
+         * 获取下次开关
+         *
+         * @return 下次开关
+         */
+        abstract public Changer getNext();
     }
 }

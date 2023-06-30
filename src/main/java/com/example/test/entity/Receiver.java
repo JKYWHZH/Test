@@ -7,7 +7,6 @@ import org.apache.commons.vfs2.FileObject;
 import org.apache.poi.ss.usermodel.Sheet;
 
 import java.util.List;
-import java.util.Random;
 
 /**
  * 邮件接收人信息
@@ -15,7 +14,7 @@ import java.util.Random;
 @Getter
 @Setter
 @Builder
-public class Receiver implements Cloneable{
+public class Receiver implements Cloneable {
 
     /**
      * 接收人姓名
@@ -47,11 +46,24 @@ public class Receiver implements Cloneable{
      */
     private long worryCount;
 
+    /**
+     * 代打卡次数
+     */
+    private long proxyClockCount;
+
     public long getWorryCount() {
         return workInfos
                 .stream()
                 .parallel()
                 .filter(workInfo -> workInfo.getHome().getLevel().equals(WORK_TYPE.WORK_TYPE_LEVEL.WORRY_HOME))
+                .count();
+    }
+
+    public long getProxyClockCount() {
+        return workInfos
+                .stream()
+                .parallel()
+                .filter(workInfo -> workInfo.getProxyClock().equals(true))
                 .count();
     }
 
