@@ -18,11 +18,11 @@ import java.util.stream.Stream;
  */
 @Component
 @Primary
-//@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 @Slf4j
 public class DefaultWorkProcess extends AbstractWorkProcess {
 
-    private ThreadLocal<Changer> changer = new ThreadLocal<>();
+    //是否允许打卡
+    private ThreadLocal<Boolean> allowClock = new ThreadLocal<>();
 
     /**
      * 处理需求（左右为包含关系）
@@ -40,25 +40,36 @@ public class DefaultWorkProcess extends AbstractWorkProcess {
      * 目前考勤模板，时间列为第5列（即下标第4列），门禁系统读卡器为第7列（即下标第6列）
      */
     @Override
-    public Map<String, WorkInfo> process(Sheet sheet) {
-        changer.set(Changer.on);
+    public List<WorkInfo> process(Sheet sheet) {
+        //默认不允许打卡
+        allowClock.set(false);
         //临时结果
         Map<String, WorkInfo> tempAns = new LinkedHashMap<>();
         for (int rowNum = 1; rowNum <= sheet.getLastRowNum(); rowNum++) {
             Row row = sheet.getRow(rowNum);
             String data = row.getCell(4).toString();
             String[] timeArray = data.split(" ");
+            //年月日
             String day = timeArray[0];
+            //时分秒
             String time = timeArray[1];
             WorkInfo workInfo;
+            //新一天数据
             if (!tempAns.containsKey(day)) {
                 workInfo = new WorkInfo();
                 workInfo.setDate(day);
-            } else {
+            } else { //同一天数据
                 workInfo = tempAns.get(day);
             }
+            //打卡位置
+            String clockPosition = row.getCell(6).toString();
+            //不参与判断打卡
+            String[] nonIncluded = {"国际资源大厦", "万达"};
+            if (Arrays.stream(nonIncluded).noneMatch(clockPosition::contains)) {
+                workInfo.setProxyClock(judgeProxyClock(time, clockPosition));
+            }
             Arrays.stream(WORK_TYPE.values())
-                    .skip(2)
+                    .skip(3)
                     .parallel()
                     .forEach(workType -> {
                         if (workType.judge(time)) {
@@ -70,24 +81,18 @@ public class DefaultWorkProcess extends AbstractWorkProcess {
                             }
                         }
                     });
-            //打卡位置
-            String clockPosition = row.getCell(6).toString();
-            workInfo.setClockPosition(clockPosition);
+
             tempAns.put(day, workInfo);
         }
         //标准工作日
         Map<String, WorkInfo> standardWorks = tempAns
                 .keySet()
                 .stream()
-                //判断代打卡情况
                 .peek(day -> {
                     WorkInfo workInfo = tempAns.get(day);
-                    boolean proxyClock = judgeProxyClock(workInfo.getClockPosition());
-                    if (proxyClock){
+                    if (workInfo.getProxyClock()) {
                         log.info("姓名[{}]，日期[{}]，可能存在代打卡情况", sheet.getRow(1).getCell(1).toString(), day);
                     }
-                    workInfo.setProxyClock(proxyClock);
-                    tempAns.put(day, workInfo);
                 })
                 .map(day -> day.substring(0, day.lastIndexOf("-")))
                 .distinct()
@@ -112,76 +117,58 @@ public class DefaultWorkProcess extends AbstractWorkProcess {
                 .parallel()
                 .flatMap(work -> work.entrySet().stream())
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> v2, TreeMap::new));
-        return ans;
+
+        List<WorkInfo> collect = ans
+                .values()
+                .stream()
+                .parallel()
+                .collect(Collectors.toList());
+        return collect;
     }
 
     /**
      * 判断代打卡情况
      *
-     * @param queue 打卡位置队列
+     * @param time          时分秒
+     * @param clockPosition 打卡位置信息
      * @return 是否代打卡
      */
-    private boolean judgeProxyClock(List<String> queue) {
+    private boolean judgeProxyClock(String time, String clockPosition) {
         //无打卡位置记录
-        if (null == queue || queue.isEmpty()) {
+        if (null == clockPosition || clockPosition.isEmpty()) {
             return false;
         }
         boolean ans = false;
         //打卡标识
         String clock = "汉军考勤机";
-        for (String oneClock : queue) {
-            if (oneClock.contains(changer.get().getInfo())) {
-                changer.set(changer.get().getNext());
-                continue;
+        //进入标识
+        String in = "进";
+        //出门标识
+        String out = "出";
+        if (clockPosition.contains(in)) {
+            allowClock.set(true);
+            return ans;
+        }
+        if (clockPosition.contains(out)) {
+            allowClock.set(false);
+            return ans;
+        }
+        Boolean isAllow = allowClock.get();
+        //允许打卡 并且 正常打卡记录
+        if (isAllow && clockPosition.contains(clock)) {
+            ans = false;
+        }
+        //不允许打卡 但是 有正常打卡纪律
+        if (!isAllow && clockPosition.contains(clock)) {
+            //判断加班
+            if (WORK_TYPE.OVER_WORK.judge(time)) {
+                ans = false;
+                allowClock.set(true);
+            } else {
+                ans = true;
             }
-            if (changer.get() != DefaultWorkProcess.Changer.on && oneClock.contains(clock)) {
-                continue;
-            }
-            ans = true;
         }
         return ans;
     }
 
-
-    /**
-     * 内部枚举开关
-     */
-    public enum Changer {
-        on {
-            @Override
-            public String getInfo() {
-                return "进";
-            }
-
-            @Override
-            public Changer getNext() {
-                return off;
-            }
-        },
-        off {
-            @Override
-            public String getInfo() {
-                return "出";
-            }
-
-            @Override
-            public Changer getNext() {
-                return on;
-            }
-        };
-
-        /**
-         * 表示信息
-         *
-         * @return 信息
-         */
-        abstract public String getInfo();
-
-        /**
-         * 获取下次开关
-         *
-         * @return 下次开关
-         */
-        abstract public Changer getNext();
-    }
 }

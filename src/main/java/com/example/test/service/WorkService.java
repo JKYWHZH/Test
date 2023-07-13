@@ -54,6 +54,7 @@ public class WorkService {
 
     /**
      * 获取压缩文件信息
+     *
      * @param file 待处理压缩文件
      * @return
      * @throws IOException
@@ -105,6 +106,7 @@ public class WorkService {
 
     /**
      * TODO: 逻辑待优化
+     *
      * @param zipFileObject
      * @return
      * @throws IOException
@@ -121,14 +123,9 @@ public class WorkService {
         //获取Excel表单
         sheet = workbook.getSheetAt(0);
         log.info(zipFileObject.getName().toString());
-        Map<String, WorkInfo> process = workProcess.process(sheet);
-        List<WorkInfo> collect = process
-                .values()
-                .stream()
-                .parallel()
-                .collect(Collectors.toList());
+        List<WorkInfo> process = workProcess.process(sheet);
         is.close();
         workbook.close();
-        return collect;
+        return process;
     }
 }

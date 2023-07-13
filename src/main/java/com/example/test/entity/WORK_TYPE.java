@@ -29,7 +29,7 @@ public enum WORK_TYPE {
     /**
      * 非工作日考勤
      */
-    NON_WORK{
+    NON_WORK {
         @Override
         public String getInfo() {
             return "非工作日考勤";
@@ -43,6 +43,26 @@ public enum WORK_TYPE {
         @Override
         public boolean judge(String time) {
             return false;
+        }
+    },
+    /**
+     * 工作日加班
+     */
+    OVER_WORK {
+        @Override
+        public String getInfo() {
+            return "正常上班";
+        }
+
+        @Override
+        public WORK_TYPE_LEVEL getLevel() {
+            return WORK_TYPE_LEVEL.OVER_WORK;
+        }
+
+        @Override
+        public boolean judge(String time) {
+            String begin = "00:00:00", end = "00:05:00";
+            return DayUtil.judge(begin, end, time);
         }
     },
     /**
@@ -189,18 +209,21 @@ public enum WORK_TYPE {
 
     /**
      * 获取考勤情况信息
+     *
      * @return 考勤情况信息
      */
     abstract public String getInfo();
 
     /**
      * 获取考勤情况异常等级
+     *
      * @return 考勤情况异常等级
      */
     abstract public WORK_TYPE_LEVEL getLevel();
 
     /**
      * 判断时间是否属于当前考勤情况
+     *
      * @param time 时分秒
      * @return 是否属于当前考勤情况
      */
@@ -210,6 +233,16 @@ public enum WORK_TYPE {
      * 考勤情况处理等级
      */
     enum WORK_TYPE_LEVEL {
+
+        /**
+         * 工作日加班
+         */
+        OVER_WORK {
+            @Override
+            public Integer getLevel() {
+                return -2;
+            }
+        },
 
         /**
          * 非工作日考勤 （加班）

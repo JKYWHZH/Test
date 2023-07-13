@@ -2,11 +2,6 @@ package com.example.test.entity;
 
 import lombok.Data;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-
 /**
  * 考勤实体类
  */
@@ -45,11 +40,6 @@ public class WorkInfo {
     private WORK_TYPE home = WORK_TYPE.NULL;
 
     /**
-     * 打卡位置队列
-     */
-    private List<String> clockPosition = Collections.synchronizedList(new LinkedList<>());
-
-    /**
      * 代打卡情况
      */
     private Boolean proxyClock = false;
@@ -72,13 +62,5 @@ public class WorkInfo {
             return true;
         }
         return false;
-    }
-
-    public void setClockPosition(String clockPosition) {
-        //不计入打卡
-        String[] nonIncluded = {"国际资源大厦", "万达"};
-        if (Arrays.stream(nonIncluded).noneMatch(clockPosition::contains)) {
-            this.clockPosition.add(clockPosition);
-        }
     }
 }
