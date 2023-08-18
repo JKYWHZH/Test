@@ -137,7 +137,6 @@ public class ExcelService {
                 proxyCell.setCellStyle(cellStyle);
                 proxyCell.setCellValue(receiver.getProxyClockCount());
             }
-
             int size = collect.size();
             //创建画布
             XSSFDrawing drawing = sheet.createDrawingPatriarch();
@@ -189,6 +188,24 @@ public class ExcelService {
             plotArea.getBarChartArray(0).getSerArray(1).getDLbls().addNewShowCatName().setVal(false);
             plotArea.getBarChartArray(0).getSerArray(1).getDLbls().addNewShowSerName().setVal(false);
             chart.plot(bar);
+            List<Receiver> proxyCollect = receivers
+                    .stream()
+                    .parallel()
+                    .filter(receiver -> receiver.getProxyClockCount() > 0)
+                    .collect(Collectors.toList());
+            for (int i = 0; i < proxyCollect.size(); i++) {
+                XSSFRow row = sheet.createRow(27 + i);
+                Receiver receiver = proxyCollect.get(i);
+                row.createCell(0).setCellValue(receiver.getName());
+                List<WorkInfo> tempReceiver = receiver.getWorkInfos()
+                        .stream()
+                        .parallel()
+                        .filter(workInfo -> workInfo.getProxyClock().equals(true))
+                        .collect(Collectors.toList());
+                for (int i1 = 1; i1 <= tempReceiver.size(); i1++) {
+                    row.createCell(i1).setCellValue(tempReceiver.get(i1 - 1).getDate());
+                }
+            }
         }, Executors.newSingleThreadExecutor());
         return future;
     }

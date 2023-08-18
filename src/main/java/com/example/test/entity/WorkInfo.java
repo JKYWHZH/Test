@@ -44,6 +44,12 @@ public class WorkInfo {
      */
     private Boolean proxyClock = false;
 
+    public void setProxyClock(Boolean proxyClock) {
+        if (!this.proxyClock) {
+            this.proxyClock = proxyClock;
+        }
+    }
+
     public void setWork(WORK_TYPE work) {
         if (work.getLevel().getLevel() <= this.work.getLevel().getLevel()) {
             this.work = work;

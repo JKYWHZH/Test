@@ -84,6 +84,7 @@ public class DefaultWorkProcess extends AbstractWorkProcess {
 
             tempAns.put(day, workInfo);
         }
+
         //标准工作日
         Map<String, WorkInfo> standardWorks = tempAns
                 .keySet()

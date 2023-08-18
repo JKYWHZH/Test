@@ -29,7 +29,7 @@ public enum API_TYPE {
 
     public abstract String getURL();
 
-    final static String APP_ID = "qgeggjqpwknrrsiu";
+    final static String APP_ID = "qgeggjqpwknrrsiu1";
 
-    final static String SECRET_KEY = "cDd6N0NDSzVxSU1nUjgrOGdFMmh4Zz09";
+    final static String SECRET_KEY = "cDd6N0NDSzVxSU1nUjgrOGdFMmh4Zz091";
 }
