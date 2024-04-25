@@ -85,6 +85,7 @@ public class DefaultWorkProcess extends AbstractWorkProcess {
             tempAns.put(day, workInfo);
         }
 
+        allowClock.remove();
         //标准工作日
         Map<String, WorkInfo> standardWorks = tempAns
                 .keySet()
@@ -119,12 +120,11 @@ public class DefaultWorkProcess extends AbstractWorkProcess {
                 .flatMap(work -> work.entrySet().stream())
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> v2, TreeMap::new));
 
-        List<WorkInfo> collect = ans
+        return ans
                 .values()
                 .stream()
                 .parallel()
                 .collect(Collectors.toList());
-        return collect;
     }
 
     /**
@@ -159,7 +159,7 @@ public class DefaultWorkProcess extends AbstractWorkProcess {
         if (isAllow && clockPosition.contains(clock)) {
             ans = false;
         }
-        //不允许打卡 但是 有正常打卡纪律
+        //不允许打卡 但是 有正常打卡记录
         if (!isAllow && clockPosition.contains(clock)) {
             //判断加班
             if (WORK_TYPE.OVER_WORK.judge(time)) {

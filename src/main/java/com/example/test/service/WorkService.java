@@ -93,7 +93,7 @@ public class WorkService {
                                 .mailAddress(first.map(Receiver::getMailAddress).orElse(null))
                                 .build();
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        log.error("Has an error when unzip file,", e);
                     }
                     return build;
                 })

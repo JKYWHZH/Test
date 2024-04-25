@@ -35,7 +35,7 @@ public class UserSelector implements FileSelector {
             return false;
         }
         String fileName = file.getName().toString();
-        if (null != receivers && 0 != receivers.size()) {
+        if (null != receivers && !receivers.isEmpty()) {
             for (Receiver receiver : receivers) {
                 if (fileName.contains(receiver.getName())) {
                     receiver.setFileObject(file);

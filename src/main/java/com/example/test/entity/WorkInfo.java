@@ -64,9 +64,6 @@ public class WorkInfo {
 
     public Boolean getAns() {
         Integer level = WORK_TYPE.WORK_TYPE_LEVEL.NO_NEED_DEAL.getLevel();
-        if (work.getLevel().getLevel() < level && home.getLevel().getLevel() < level) {
-            return true;
-        }
-        return false;
+        return work.getLevel().getLevel() < level && home.getLevel().getLevel() < level;
     }
 }
