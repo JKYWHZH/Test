@@ -123,7 +123,7 @@ public class DayUtil {
      * @param url 请求路径
      * @return 日历信息
      */
-    private static synchronized List<String> get(String url) {
+    private static List<String> get(String url) {
         if (HOLIDAY_CACHE.containsKey(url)) {
             return HOLIDAY_CACHE.get(url);
         }
@@ -137,9 +137,9 @@ public class DayUtil {
         try {
             response = client.newCall(request).execute();
             Map map = JSONObject.parseObject(response.body().string(), Map.class);
-            Object data = ((JSONArray) map.get("data")).get(0);
+            Object data = JSONArray.parseArray(map.get("data").toString()).get(0);
             JSONArray days = (JSONArray) ((JSONObject) data).get("days");
-            days.stream().forEach(e -> {
+            days.forEach(e -> {
                 String date = ((JSONObject) e).get("date").toString();
                 day.add(date);
             });

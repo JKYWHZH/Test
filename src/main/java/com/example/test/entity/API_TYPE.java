@@ -5,13 +5,13 @@ public enum API_TYPE {
     WORKDAY{
         @Override
         public String getURL() {
-            return "/workday?&app_id=".concat(APP_ID).concat("&app_secret=").concat(SECRET_KEY);
+            return "/workday?app_id=".concat(APP_ID).concat("&app_secret=").concat(SECRET_KEY);
         }
     },
     HOLIDAY {
         @Override
         public String getURL() {
-            return "/holiday?&app_id=".concat(APP_ID).concat("&app_secret=").concat(SECRET_KEY);
+            return "/holiday?app_id=".concat(APP_ID).concat("&app_secret=").concat(SECRET_KEY);
         }
     },
     REST {
@@ -29,7 +29,7 @@ public enum API_TYPE {
 
     public abstract String getURL();
 
-    final static String APP_ID = "qgeggjqpwknrrsiu1";
+    final static String APP_ID = "qgeggjqpwknrrsiu";
 
-    final static String SECRET_KEY = "cDd6N0NDSzVxSU1nUjgrOGdFMmh4Zz091";
+    final static String SECRET_KEY = "cDd6N0NDSzVxSU1nUjgrOGdFMmh4Zz09";
 }
